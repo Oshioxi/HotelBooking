@@ -239,7 +239,7 @@
                     'PENDING': 'badge-warning',
                     'CONFIRMED': 'badge-success',
                     'CANCELLED': 'badge-danger',
-                    'COMPLETED': 'badge-info'
+                    'COMPLETED': 'badge-primary'
                 }[booking.bookingStatus] || 'badge-secondary';
                 
                 const statusText = {

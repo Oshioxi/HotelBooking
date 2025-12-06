@@ -145,7 +145,17 @@
         async function loadBookings() {
             try {
                 const bookings = await HotelBookingAPI.AdminAPI.getAllBookings();
-                displayBookings(bookings);
+                // Load payment status for each booking
+                const bookingsWithPayment = await Promise.all(bookings.map(async (booking) => {
+                    try {
+                        const payment = await HotelBookingAPI.PaymentAPI.getLatestByBooking(booking.id);
+                        return { ...booking, payment: payment };
+                    } catch (error) {
+                        // No payment found - that's fine for new bookings
+                        return { ...booking, payment: null };
+                    }
+                }));
+                displayBookings(bookingsWithPayment);
             } catch (error) {
                 console.error('Error loading bookings:', error);
                 alert('Error loading bookings: ' + error.message);
@@ -165,10 +175,38 @@
                     'PENDING': 'badge-warning',
                     'CONFIRMED': 'badge-success',
                     'CANCELLED': 'badge-danger',
-                    'COMPLETED': 'badge-info'
+                    'COMPLETED': 'badge-primary'
                 }[booking.bookingStatus] || 'badge-secondary';
                 
-                // Payment status is now in Payment entity, not in Booking
+                // Get payment status and color
+                let paymentStatus = 'NO PAYMENT';
+                let paymentStatusClass = 'badge-secondary'; // Gray for no payment
+                
+                if (booking.payment) {
+                    const paymentStatusUpper = (booking.payment.paymentStatus || '').toUpperCase();
+                    paymentStatus = paymentStatusUpper;
+                    
+                    // Set color based on payment status
+                    switch(paymentStatusUpper) {
+                        case 'PAID':
+                            paymentStatusClass = 'badge-success'; // Green
+                            break;
+                        case 'PENDING':
+                            paymentStatusClass = 'badge-warning'; // Yellow
+                            break;
+                        case 'FAILED':
+                            paymentStatusClass = 'badge-danger'; // Red
+                            break;
+                        case 'REFUNDED':
+                            paymentStatusClass = 'badge-info'; // Blue
+                            break;
+                        case 'CANCELLED':
+                            paymentStatusClass = 'badge-secondary'; // Gray
+                            break;
+                        default:
+                            paymentStatusClass = 'badge-secondary'; // Gray
+                    }
+                }
                 
                 html += '<tr>' +
                     '<td><strong>#' + booking.id + '</strong></td>' +
@@ -178,7 +216,7 @@
                     '<td>' + HotelBookingAPI.Utils.formatDate(booking.checkOutDate) + '</td>' +
                     '<td>' + HotelBookingAPI.Utils.formatCurrency(booking.totalPrice || 0) + '</td>' +
                     '<td><span class="badge ' + bookingStatusClass + '">' + (booking.bookingStatus || 'N/A') + '</span></td>' +
-                    '<td><span class="badge badge-secondary">Check Payment</span></td>' +
+                    '<td><span class="badge ' + paymentStatusClass + '">' + paymentStatus + '</span></td>' +
                     '<td>' +
                         (booking.bookingStatus === 'PENDING' ? 
                             '<button class="btn btn-sm btn-success" onclick="confirmBooking(' + booking.id + ')">' +

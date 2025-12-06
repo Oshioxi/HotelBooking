@@ -76,10 +76,8 @@ function loadSidebarMenu(role, currentPage) {
         menuHTML += menuItem('/owner/rooms', 'far fa-door-open', 'My Rooms', isActive('/owner/rooms'));
         menuHTML += menuItem('/owner/bookings', 'far fa-shopping-bag', 'My Bookings', isActive('/owner/bookings'));
     } else {
-        menuHTML += menuItem('/dashboard', 'far fa-gauge-high', 'Dashboard', isActive('/dashboard'));
-        menuHTML += menuItem('/user/profile', 'far fa-user', 'My Profile', isActive('/user/profile'));
-        menuHTML += menuItem('/profile-booking', 'far fa-shopping-bag', 'My Booking', isActive('/profile-booking'));
-        menuHTML += menuItem('/profile-booking-history', 'far fa-clipboard-list', 'Booking History', isActive('/profile-booking-history'));
+        // USER role - Hồ sơ instead of Dashboard
+        menuHTML += menuItem('/user/profile', 'far fa-user', 'Hồ sơ', isActive('/user/profile'));
     }
 
     menuHTML += `<li><a href="#" onclick="logout()"><i class="far fa-sign-out"></i> Logout</a></li>`;
@@ -318,7 +316,7 @@ function displayRecentBookings(bookings) {
             'PENDING': 'badge-warning',
             'CONFIRMED': 'badge-success',
             'CANCELLED': 'badge-danger',
-            'COMPLETED': 'badge-info'
+            'COMPLETED': 'badge-primary'
         }[booking.bookingStatus] || 'badge-secondary';
         
         html += `

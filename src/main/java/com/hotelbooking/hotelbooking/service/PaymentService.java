@@ -7,8 +7,10 @@ import com.hotelbooking.hotelbooking.model.Booking;
 import com.hotelbooking.hotelbooking.model.Payment;
 import com.hotelbooking.hotelbooking.model.Payment.PaymentMethod;
 import com.hotelbooking.hotelbooking.model.Payment.PaymentStatus;
+import com.hotelbooking.hotelbooking.model.RoomType;
 import com.hotelbooking.hotelbooking.repository.BookingRepository;
 import com.hotelbooking.hotelbooking.repository.PaymentRepository;
+import com.hotelbooking.hotelbooking.repository.RoomTypeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,9 @@ public class PaymentService {
     
     @Autowired
     private BookingRepository bookingRepository;
+    
+    @Autowired
+    private RoomTypeRepository roomTypeRepository;
 
     public List<Payment> getAllPayments() {
         return paymentRepository.findAll();
@@ -104,6 +109,15 @@ public class PaymentService {
             if (booking.getBookingStatus() == Booking.BookingStatus.PENDING) {
                 booking.setBookingStatus(Booking.BookingStatus.CONFIRMED);
                 bookingRepository.save(booking);
+                
+                // Deduct totalRooms from RoomType
+                RoomType roomType = roomTypeRepository.findById(booking.getRoomTypeId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Room type not found"));
+                int currentTotalRooms = roomType.getTotalRooms() != null ? roomType.getTotalRooms() : 0;
+                int numberOfRooms = booking.getNumberOfRooms() != null ? booking.getNumberOfRooms() : 1;
+                int newTotalRooms = Math.max(0, currentTotalRooms - numberOfRooms);
+                roomType.setTotalRooms(newTotalRooms);
+                roomTypeRepository.save(roomType);
             }
         } else if (request.getPaymentMethod() == PaymentMethod.COD || 
                    request.getPaymentMethod() == PaymentMethod.AT_HOTEL) {
@@ -131,6 +145,15 @@ public class PaymentService {
         if (booking.getBookingStatus() == Booking.BookingStatus.PENDING) {
             booking.setBookingStatus(Booking.BookingStatus.CONFIRMED);
             bookingRepository.save(booking);
+            
+            // Deduct totalRooms from RoomType
+            RoomType roomType = roomTypeRepository.findById(booking.getRoomTypeId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Room type not found"));
+            int currentTotalRooms = roomType.getTotalRooms() != null ? roomType.getTotalRooms() : 0;
+            int numberOfRooms = booking.getNumberOfRooms() != null ? booking.getNumberOfRooms() : 1;
+            int newTotalRooms = Math.max(0, currentTotalRooms - numberOfRooms);
+            roomType.setTotalRooms(newTotalRooms);
+            roomTypeRepository.save(roomType);
         }
 
         return paymentRepository.save(payment);

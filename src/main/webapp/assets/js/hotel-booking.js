@@ -518,28 +518,41 @@ function setupCancelBooking(booking) {
         
         const cancelBtn = document.getElementById('cancelBookingBtn');
         if (cancelBtn) {
-            cancelBtn.addEventListener('click', async function() {
+            // Remove existing event listeners by cloning
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            
+            newCancelBtn.addEventListener('click', async function() {
                 if (!confirm('Are you sure you want to cancel this booking?')) {
                     return;
                 }
                 
-                const userId = HotelBookingAPI.TokenManager.getUserId();
-                if (!userId) {
-                    alert('User information not found');
-                    return;
-                }
-                
                 try {
-                    cancelBtn.disabled = true;
-                    cancelBtn.innerHTML = '<span class="far fa-spinner fa-spin"></span> Cancelling...';
+                    newCancelBtn.disabled = true;
+                    newCancelBtn.innerHTML = '<span class="far fa-spinner fa-spin"></span> Cancelling...';
                     
-                    await HotelBookingAPI.BookingAPI.cancel(booking.id, userId);
+                    // Check user role to use appropriate endpoint
+                    const userRole = HotelBookingAPI.TokenManager.getUserRole();
+                    const userId = HotelBookingAPI.TokenManager.getUserId();
+                    const bookingUserId = booking.userId;
+                    
+                    // If user is ADMIN or HOTEL_OWNER, or if booking belongs to current user, allow cancel
+                    if (userRole === 'ADMIN' || userRole === 'HOTEL_OWNER') {
+                        // Admin/Owner can cancel any booking
+                        await HotelBookingAPI.BookingAPI.cancelByAdmin(booking.id);
+                    } else if (userId && bookingUserId && userId.toString() === bookingUserId.toString()) {
+                        // User can cancel their own booking
+                        await HotelBookingAPI.BookingAPI.cancel(booking.id, userId);
+                    } else {
+                        throw new Error('You can only cancel your own bookings');
+                    }
+                    
                     alert('Booking cancelled successfully');
                     location.reload();
                 } catch (error) {
                     alert('Error cancelling booking: ' + (error.message || 'Please try again'));
-                    cancelBtn.disabled = false;
-                    cancelBtn.innerHTML = '<i class="far fa-times-circle"></i> Cancel Booking';
+                    newCancelBtn.disabled = false;
+                    newCancelBtn.innerHTML = '<i class="far fa-times-circle"></i> Cancel Booking';
                 }
             });
         }

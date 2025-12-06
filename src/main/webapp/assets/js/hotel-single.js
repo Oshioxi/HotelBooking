@@ -818,6 +818,9 @@ async function displayAvailableRooms(rooms, checkIn, checkOut, guests) {
                                      onmouseover="this.style.transform='scale(1.05)'"
                                      onmouseout="this.style.transform='scale(1)'">
                                 ${room.totalRooms > 0 ? `<span class="badge bg-success position-absolute top-0 end-0 m-2" style="font-size: 0.85rem; padding: 0.5rem 0.8rem; z-index: 10;">Còn ${room.totalRooms} phòng</span>` : ''}
+                                <a href="#" class="add-wishlist-room" id="wishlist-room-${room.id}" onclick="toggleRoomWishlist(${room.id}, event)" title="Add to wishlist" style="position: absolute; top: 15px; right: 15px; width: 40px; height: 40px; background: rgba(255, 255, 255, 0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #666; text-decoration: none; transition: all 0.3s ease; z-index: 11; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                                    <i class="far fa-heart"></i>
+                                </a>
                             </div>
                         </div>
                         <div class="col-md-7">
@@ -888,6 +891,77 @@ async function displayAvailableRooms(rooms, checkIn, checkOut, guests) {
     });
     
     roomsContainer.innerHTML = html;
+    
+    // Load wishlist status for each room
+    await loadRoomWishlistStatus(roomsWithDetails);
+}
+
+// Load wishlist status for rooms
+async function loadRoomWishlistStatus(rooms) {
+    if (!HotelBookingAPI || !HotelBookingAPI.TokenManager || !HotelBookingAPI.TokenManager.getToken()) {
+        // User not logged in, hide wishlist buttons or show login prompt
+        return;
+    }
+    
+    try {
+        for (const room of rooms) {
+            try {
+                const isFavorite = await HotelBookingAPI.UserAPI.checkRoomTypeFavorite(room.id);
+                const wishlistBtn = document.getElementById(`wishlist-room-${room.id}`);
+                if (wishlistBtn) {
+                    if (isFavorite) {
+                        wishlistBtn.classList.add('active');
+                        wishlistBtn.title = 'Remove from wishlist';
+                    } else {
+                        wishlistBtn.classList.remove('active');
+                        wishlistBtn.title = 'Add to wishlist';
+                    }
+                }
+            } catch (error) {
+                // If error (e.g., 403), just leave button as is
+                console.warn(`Error checking wishlist status for room ${room.id}:`, error);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading room wishlist status:', error);
+    }
+}
+
+// Toggle room wishlist
+async function toggleRoomWishlist(roomId, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    if (!HotelBookingAPI || !HotelBookingAPI.TokenManager || !HotelBookingAPI.TokenManager.getToken()) {
+        alert('Vui lòng đăng nhập để thêm phòng vào yêu thích');
+        return;
+    }
+    
+    try {
+        const wishlistBtn = document.getElementById(`wishlist-room-${roomId}`);
+        if (!wishlistBtn) return;
+        
+        const isFavorite = wishlistBtn.classList.contains('active');
+        
+        if (isFavorite) {
+            await HotelBookingAPI.UserAPI.removeFavoriteRoomType(roomId);
+            wishlistBtn.classList.remove('active');
+            wishlistBtn.title = 'Add to wishlist';
+        } else {
+            await HotelBookingAPI.UserAPI.addFavorite(null, roomId);
+            wishlistBtn.classList.add('active');
+            wishlistBtn.title = 'Remove from wishlist';
+        }
+    } catch (error) {
+        console.error('Error toggling room wishlist:', error);
+        alert('Lỗi cập nhật wishlist: ' + (error.message || 'Vui lòng thử lại'));
+    }
+}
+
+// Export to global scope
+window.toggleRoomWishlist = toggleRoomWishlist;
 }
 
 // Setup room search form
@@ -1037,169 +1111,6 @@ async function checkWishlistStatus() {
         // Only log other errors
         console.error('Error checking wishlist status:', error);
     }
-}
-
-async function displayAvailableRooms(rooms, checkIn, checkOut, guests) {
-    const roomsContainer = document.getElementById('availableRoomsList');
-    if (!roomsContainer) return;
-    
-    if (rooms.length === 0) {
-        roomsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info"><i class="far fa-info-circle"></i> Không có phòng nào phù hợp với tiêu chí tìm kiếm của bạn.</div></div>';
-        return;
-    }
-    
-    const checkInParam = checkIn ? `&checkIn=${checkIn}` : '';
-    const checkOutParam = checkOut ? `&checkOut=${checkOut}` : '';
-    const guestsParam = guests ? `&guests=${guests}` : '';
-    
-    // Load room images and amenities for each room
-    const roomsWithDetails = await Promise.all(rooms.map(async (room) => {
-        try {
-            const [images, amenities] = await Promise.all([
-                HotelBookingAPI.RoomTypeImageAPI.getByRoomType(room.id).catch(() => []),
-                HotelBookingAPI.RoomTypeAmenityAPI.getByRoomType(room.id).catch(() => [])
-            ]);
-            
-            room.images = Array.isArray(images) ? images : [];
-            
-            // Load full amenity details
-            if (Array.isArray(amenities) && amenities.length > 0) {
-                const amenityDetails = await Promise.all(
-                    amenities.map(async (rta) => {
-                        try {
-                            const amenity = await HotelBookingAPI.AmenityAPI.getById(rta.amenityId);
-                            return amenity;
-                        } catch (e) {
-                            return null;
-                        }
-                    })
-                );
-                room.amenities = amenityDetails.filter(a => a != null);
-            } else {
-                room.amenities = [];
-            }
-            
-            return room;
-        } catch (e) {
-            console.warn(`Error loading details for room ${room.id}:`, e);
-            room.images = [];
-            room.amenities = [];
-            return room;
-        }
-    }));
-    
-    let html = '';
-    roomsWithDetails.forEach(room => {
-        // Get primary image or first image
-        let imageUrl = '/assets/img/hotel/room/04.jpg';
-        if (room.images && Array.isArray(room.images) && room.images.length > 0) {
-            const primaryImage = room.images.find(img => img && img.isPrimary) || room.images[0];
-            if (primaryImage && primaryImage.imageUrl) {
-                imageUrl = primaryImage.imageUrl.startsWith('http') ? primaryImage.imageUrl :
-                          primaryImage.imageUrl.startsWith('/') ? primaryImage.imageUrl :
-                          `/${primaryImage.imageUrl}`;
-            }
-        }
-        
-        const priceInUSD = (parseFloat(room.pricePerNight) / 25000).toFixed(2);
-        const priceInVND = parseFloat(room.pricePerNight).toLocaleString('vi-VN');
-        
-        // Room amenities as badges
-        const amenitiesList = room.amenities && room.amenities.length > 0
-            ? room.amenities.slice(0, 8).map(a => {
-                return `<span class="badge bg-light text-dark me-2 mb-2" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; border: 1px solid #dee2e6;">
-                    ${a.name || a}
-                </span>`;
-            }).join('')
-            : '<span class="text-muted small">Chưa có thông tin tiện ích</span>';
-        
-        // Room type display
-        const roomTypeDisplay = room.roomType ? `<span class="badge bg-secondary me-2" style="font-size: 0.85rem;">${room.roomType}</span>` : '';
-        
-        html += `
-            <div class="col-md-12 mb-4">
-                <div class="room-item" style="border: 1px solid #e0e0e0; border-radius: 12px; overflow: hidden; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)'">
-                    <div class="row g-0">
-                        <div class="col-md-5">
-                            <div class="room-img" style="height: 100%; min-height: 300px; position: relative; overflow: hidden;">
-                                <img src="${imageUrl}" 
-                                     alt="${room.name || 'Room'}" 
-                                     loading="lazy"
-                                     style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s;" 
-                                     onerror="this.src='/assets/img/hotel/room/04.jpg'"
-                                     onmouseover="this.style.transform='scale(1.05)'"
-                                     onmouseout="this.style.transform='scale(1)'">
-                                ${room.totalRooms > 0 ? `<span class="badge bg-success position-absolute top-0 end-0 m-2" style="font-size: 0.85rem; padding: 0.5rem 0.8rem; z-index: 10;">Còn ${room.totalRooms} phòng</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="col-md-7">
-                            <div class="room-content" style="padding: 2rem;">
-                                <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div>
-                                        <h4 class="room-title mb-2" style="font-size: 1.75rem; font-weight: 700; color: #2c3e50; line-height: 1.3;">
-                                            ${room.name || 'Room'}
-                                        </h4>
-                                        <div class="mb-2">
-                                            ${roomTypeDisplay}
-                                            <span class="text-muted small" style="font-size: 0.9rem;">
-                                                <i class="far fa-user me-1"></i>Tối đa ${room.maxOccupancy || '-'} khách/phòng
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                ${room.description ? `
-                                    <p class="room-description mb-3" style="color: #555; line-height: 1.6; font-size: 0.95rem;">
-                                        ${room.description}
-                                    </p>
-                                ` : ''}
-                                
-                                <div class="room-amenities mb-4">
-                                    <h6 class="mb-2" style="font-size: 0.9rem; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Tiện ích phòng</h6>
-                                    <div style="line-height: 2;">
-                                        ${amenitiesList}
-                                    </div>
-                                </div>
-                                
-                                <div class="room-bottom d-flex justify-content-between align-items-center pt-3" style="border-top: 2px solid #f0f0f0;">
-                                    <div class="room-price">
-                                        <div class="d-flex align-items-baseline">
-                                            <span class="room-price-amount" style="font-size: 2rem; font-weight: 700; color: #007bff; margin-right: 0.5rem;">
-                                                ${priceInVND}
-                                            </span>
-                                            <span class="text-muted" style="font-size: 0.9rem;">VND</span>
-                                        </div>
-                                        <div class="text-muted small mt-1" style="font-size: 0.85rem;">
-                                            <i class="far fa-calendar-alt me-1"></i>$${priceInUSD} / đêm
-                                        </div>
-                                    </div>
-                                    <div class="room-select-btn">
-                                        <a href="/hotel-booking?roomTypeId=${room.id}${checkInParam}${checkOutParam}${guestsParam}" 
-                                           class="btn btn-lg" 
-                                           style="background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%); 
-                                                  color: white; 
-                                                  border: none; 
-                                                  padding: 0.875rem 2.5rem; 
-                                                  font-weight: 600; 
-                                                  border-radius: 8px; 
-                                                  text-decoration: none;
-                                                  box-shadow: 0 4px 6px rgba(32, 201, 151, 0.3);
-                                                  transition: all 0.3s;"
-                                           onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(32, 201, 151, 0.4)'"
-                                           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(32, 201, 151, 0.3)'">
-                                            <i class="far fa-calendar-check me-2"></i>Đặt Phòng Ngay
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    roomsContainer.innerHTML = html;
 }
 
 // Setup room search form

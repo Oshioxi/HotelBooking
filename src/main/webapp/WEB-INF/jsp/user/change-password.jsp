@@ -229,10 +229,10 @@
             submitBtn.innerHTML = '<i class="far fa-spinner fa-spin"></i> ' + messages.changing;
             
             try {
+                // Backend expects: oldPassword and newPassword
                 const passwordData = {
-                    currentPassword: currentPassword,
-                    newPassword: newPassword,
-                    confirmPassword: confirmPassword
+                    oldPassword: currentPassword,
+                    newPassword: newPassword
                 };
                 
                 await HotelBookingAPI.UserAPI.changePassword(passwordData);

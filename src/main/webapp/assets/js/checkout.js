@@ -46,17 +46,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         displayBookingSummary(currentBooking, room, hotel);
 
         // Check if payment already exists
-        try {
-            currentPayment = await HotelBookingAPI.PaymentAPI.getLatestByBooking(bookingId);
-            if (currentPayment.paymentStatus === 'PAID') {
-                // Payment already completed, redirect to booking page
-                window.location.href = `/hotel-booking?id=${bookingId}`;
-                return;
-            }
-        } catch (error) {
-            // No payment exists yet, that's fine
-            console.log('No existing payment found');
+        currentPayment = await HotelBookingAPI.PaymentAPI.getLatestByBooking(bookingId);
+        if (currentPayment && currentPayment.paymentStatus === 'PAID') {
+            // Payment already completed, redirect to booking page
+            window.location.href = `/hotel-booking?id=${bookingId}`;
+            return;
         }
+        // If currentPayment is null, it means no payment exists yet - this is normal for new bookings
 
         // Setup payment form
         setupPaymentForm();

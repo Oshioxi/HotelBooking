@@ -85,11 +85,8 @@
                             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" id="userMenuLink">
                                 <i class="far fa-user"></i> <span id="userName">User</span>
                             </a>
-                            <ul class="dropdown-menu fade-down">
-                                <li><a class="dropdown-item" href="${pageContext.request.contextPath}/dashboard"><i class="far fa-gauge-high"></i> <spring:message code="common.dashboard"/></a></li>
-                                <li><a class="dropdown-item" href="${pageContext.request.contextPath}/profile-booking"><i class="far fa-shopping-bag"></i> <spring:message code="user.bookings_history"/></a></li>
-                                <li><a class="dropdown-item" href="${pageContext.request.contextPath}/wishlist"><i class="far fa-heart"></i> My Wishlist</a></li>
-                                <li><a class="dropdown-item" href="#" id="logoutLink"><i class="far fa-sign-out"></i> <spring:message code="common.logout"/></a></li>
+                            <ul class="dropdown-menu fade-down" id="userDropdownMenu">
+                                <!-- Menu will be populated by JavaScript based on user role -->
                             </ul>
                         </li>
                         <li class="nav-item"><a class="nav-link" href="${pageContext.request.contextPath}/contact"><spring:message code="nav.contact"/></a></li>
@@ -109,4 +106,63 @@
 <!-- header area end -->
 
 <script src="${pageContext.request.contextPath}/assets/js/i18n.js"></script>
+<script>
+    // Populate user dropdown menu based on role
+    function populateUserDropdownMenu() {
+        const dropdownMenu = document.getElementById('userDropdownMenu');
+        if (!dropdownMenu) return;
+        
+        const contextPath = '<c:out value="${pageContext.request.contextPath}" escapeXml="true" default="" />';
+        
+        // Check if user is logged in
+        if (typeof window.HotelBookingAPI !== 'undefined' && window.HotelBookingAPI.TokenManager) {
+            const token = window.HotelBookingAPI.TokenManager.getToken();
+            if (token) {
+                const userRole = window.HotelBookingAPI.TokenManager.getUserRole();
+                let menuHTML = '';
+                
+                if (userRole === 'USER') {
+                    // User menu - Hồ sơ instead of Dashboard
+                    menuHTML += '<li><a class="dropdown-item" href="' + contextPath + '/user/profile"><i class="far fa-user"></i> Hồ sơ</a></li>';
+                    menuHTML += '<li><a class="dropdown-item" href="' + contextPath + '/wishlist"><i class="far fa-heart"></i> My Wishlist</a></li>';
+                } else if (userRole === 'HOTEL_OWNER' || userRole === 'ADMIN') {
+                    // Admin/Owner menu - Keep Dashboard
+                    menuHTML += '<li><a class="dropdown-item" href="' + contextPath + '/dashboard"><i class="far fa-gauge-high"></i> <spring:message code="common.dashboard"/></a></li>';
+                    menuHTML += '<li><a class="dropdown-item" href="' + contextPath + '/user/profile"><i class="far fa-user"></i> <spring:message code="user.profile"/></a></li>';
+                }
+                
+                menuHTML += '<li><a class="dropdown-item" href="#" id="logoutLink"><i class="far fa-sign-out"></i> <spring:message code="common.logout"/></a></li>';
+                dropdownMenu.innerHTML = menuHTML;
+                
+                // Setup logout handler
+                const logoutLink = document.getElementById('logoutLink');
+                if (logoutLink) {
+                    logoutLink.onclick = function(e) {
+                        e.preventDefault();
+                        if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+                            if (window.HotelBookingAPI && window.HotelBookingAPI.TokenManager) {
+                                window.HotelBookingAPI.TokenManager.clear();
+                            }
+                            window.location.href = contextPath + '/index';
+                        }
+                    };
+                }
+            }
+        }
+    }
+    
+    // Run when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(populateUserDropdownMenu, 100);
+        });
+    } else {
+        setTimeout(populateUserDropdownMenu, 100);
+    }
+    
+    // Also run after API is loaded
+    if (typeof window.HotelBookingAPI !== 'undefined') {
+        setTimeout(populateUserDropdownMenu, 200);
+    }
+</script>
 

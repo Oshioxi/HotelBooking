@@ -667,7 +667,7 @@ function sortHotels(sortValue) {
     displayHotels(filteredHotels, currentFilters.checkIn, currentFilters.checkOut, currentFilters.guests);
 }
 
-function displayHotels(hotels, checkIn, checkOut, guests) {
+async function displayHotels(hotels, checkIn, checkOut, guests) {
     const container = document.getElementById('hotelsContainer');
     if (!container) return;
 
@@ -722,6 +722,9 @@ function displayHotels(hotels, checkIn, checkOut, guests) {
                         <a href="${hotelUrl}">
                             <img src="${imageUrl}" alt="${hotel.name || 'Hotel'}" onerror="this.src='/assets/img/hotel/01.jpg'">
                         </a>
+                        <a href="#" class="add-wishlist" id="wishlist-${hotel.id}" onclick="toggleHotelWishlist(${hotel.id}, event)" title="Add to wishlist">
+                            <i class="far fa-heart"></i>
+                        </a>
                     </div>
                     <div class="hotel-content">
                         <h4 class="hotel-title">
@@ -750,7 +753,85 @@ function displayHotels(hotels, checkIn, checkOut, guests) {
     
     // Update results count (show total, not paginated count)
     updateResultsCount(hotels.length);
+    
+    // Load wishlist status for each hotel
+    await loadWishlistStatus(hotels);
 }
+
+// Load wishlist status for hotels
+async function loadWishlistStatus(hotels) {
+    if (!HotelBookingAPI || !HotelBookingAPI.TokenManager || !HotelBookingAPI.TokenManager.getToken()) {
+        // User not logged in, hide wishlist buttons or show login prompt
+        return;
+    }
+    
+    try {
+        for (const hotel of hotels) {
+            try {
+                const isFavorite = await HotelBookingAPI.UserAPI.checkHotelFavorite(hotel.id);
+                const wishlistBtn = document.getElementById(`wishlist-${hotel.id}`);
+                if (wishlistBtn) {
+                    if (isFavorite) {
+                        wishlistBtn.classList.add('active');
+                        wishlistBtn.title = 'Remove from wishlist';
+                    } else {
+                        wishlistBtn.classList.remove('active');
+                        wishlistBtn.title = 'Add to wishlist';
+                    }
+                }
+            } catch (error) {
+                // If error (e.g., 403), just leave button as is
+                console.warn(`Error checking wishlist status for hotel ${hotel.id}:`, error);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading wishlist status:', error);
+    }
+}
+
+// Toggle hotel wishlist
+async function toggleHotelWishlist(hotelId, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    if (!HotelBookingAPI || !HotelBookingAPI.TokenManager || !HotelBookingAPI.TokenManager.getToken()) {
+        alert('Please login to add hotels to your wishlist');
+        return;
+    }
+    
+    try {
+        const wishlistBtn = document.getElementById(`wishlist-${hotelId}`);
+        if (!wishlistBtn) return;
+        
+        const isFavorite = wishlistBtn.classList.contains('active');
+        
+        if (isFavorite) {
+            await HotelBookingAPI.UserAPI.removeFavoriteHotel(hotelId);
+            wishlistBtn.classList.remove('active');
+            wishlistBtn.title = 'Add to wishlist';
+            // Show toast or notification
+            if (typeof showToast === 'function') {
+                showToast('Hotel removed from wishlist', 'success');
+            }
+        } else {
+            await HotelBookingAPI.UserAPI.addFavorite(hotelId, null);
+            wishlistBtn.classList.add('active');
+            wishlistBtn.title = 'Remove from wishlist';
+            // Show toast or notification
+            if (typeof showToast === 'function') {
+                showToast('Hotel added to wishlist', 'success');
+            }
+        }
+    } catch (error) {
+        console.error('Error toggling wishlist:', error);
+        alert('Error updating wishlist: ' + (error.message || 'Please try again'));
+    }
+}
+
+// Export to global scope
+window.toggleHotelWishlist = toggleHotelWishlist;
 
 function addPagination(totalResults) {
     const container = document.getElementById('hotelsContainer');

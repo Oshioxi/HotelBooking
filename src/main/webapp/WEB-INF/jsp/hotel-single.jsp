@@ -322,6 +322,72 @@
                 width: 100%;
             }
         }
+        
+        /* Wishlist Button Styles */
+        .wishlist-btn {
+            transition: all 0.3s ease;
+            border: 2px solid #dc3545;
+            background: white;
+        }
+        
+        .wishlist-btn:hover {
+            background: #dc3545;
+            color: white;
+            transform: scale(1.1);
+        }
+        
+        .wishlist-btn.active {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+        
+        .wishlist-btn.active i {
+            color: white;
+        }
+        
+        .wishlist-btn i {
+            font-size: 1.2rem;
+        }
+        
+        /* Room Wishlist Button Styles */
+        .add-wishlist-room {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            z-index: 11;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .add-wishlist-room:hover {
+            background: rgba(255, 255, 255, 1);
+            color: #dc3545;
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .add-wishlist-room.active {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .add-wishlist-room.active i {
+            color: white;
+        }
+        
+        .add-wishlist-room i {
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 
@@ -423,14 +489,24 @@
                                         <div class="hotel-header-section mb-4">
                                             <div class="d-flex justify-content-between align-items-start flex-wrap">
                                                 <div class="hotel-header-left">
-                                                    <h1 class="hotel-title-main" id="hotelName">Loading...</h1>
-                                                    <div class="hotel-rating-info mb-2">
-                                                        <div class="hotel-stars" id="hotelStars"></div>
-                                                        <span class="hotel-rating-text" id="hotelRatingText"></span>
+                                                    <div class="d-flex align-items-start justify-content-between">
+                                                        <div class="flex-grow-1">
+                                                            <h1 class="hotel-title-main" id="hotelName">Loading...</h1>
+                                                            <div class="hotel-rating-info mb-2">
+                                                                <div class="hotel-stars" id="hotelStars"></div>
+                                                                <span class="hotel-rating-text" id="hotelRatingText"></span>
+                                                            </div>
+                                                            <p class="hotel-location-text" id="hotelLocation">
+                                                                <i class="far fa-location-dot"></i> Loading...
+                                                            </p>
+                                                        </div>
+                                                        <div class="ms-3">
+                                                            <button id="wishlistBtn" class="btn btn-outline-danger wishlist-btn" onclick="toggleWishlist(event)" title="Add to wishlist" style="border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                                                <i class="far fa-heart"></i>
+                                                            </button>
+                                                            <small class="d-block text-center mt-1" id="wishlistText" style="font-size: 0.75rem; color: #666;">Thêm vào yêu thích</small>
+                                                        </div>
                                                     </div>
-                                                    <p class="hotel-location-text" id="hotelLocation">
-                                                        <i class="far fa-location-dot"></i> Loading...
-                                                    </p>
                                                 </div>
                                                 <div class="hotel-header-right">
                                                     <div class="hotel-price-box" id="hotelPriceBox" style="display: none;">

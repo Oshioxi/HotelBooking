@@ -48,6 +48,9 @@ async function apiRequest(endpoint, options = {}) {
         headers['Authorization'] = `Bearer ${token}`;
     }
     
+    // Store endpoint for error handling
+    const requestEndpoint = endpoint;
+    
     try {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             ...options,
@@ -100,7 +103,16 @@ async function apiRequest(endpoint, options = {}) {
         
         return data;
     } catch (error) {
-        console.error('API Error:', error);
+        // Don't log 404 errors for payment endpoints - they're expected for new bookings
+        const shouldSilenceError = requestEndpoint.includes('/payments/booking/') && 
+                                   requestEndpoint.includes('/latest') &&
+                                   (error.message && (error.message.includes('No payment found') || 
+                                                      error.message.includes('404')));
+        
+        if (!shouldSilenceError) {
+            console.error('API Error:', error);
+        }
+        
         // If it's already an Error object, throw it as is
         if (error instanceof Error) {
             throw error;
@@ -589,9 +601,22 @@ const BookingAPI = {
         });
     },
     
+    cancelByAdmin: async (id) => {
+        return await apiRequest(`/bookings/${id}/cancel-by-admin`, {
+            method: 'PUT'
+        });
+    },
+    
     confirm: async (id) => {
         return await apiRequest(`/bookings/${id}/confirm`, {
             method: 'PUT'
+        });
+    },
+    
+    update: async (id, bookingData) => {
+        return await apiRequest(`/bookings/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(bookingData)
         });
     }
 };
@@ -610,7 +635,22 @@ const PaymentAPI = {
     },
     
     getLatestByBooking: async (bookingId) => {
-        return await apiRequest(`/payments/booking/${bookingId}/latest`);
+        try {
+            return await apiRequest(`/payments/booking/${bookingId}/latest`);
+        } catch (error) {
+            // If 404 or "No payment found", return null instead of throwing
+            // This is a normal case for new bookings that don't have payment yet
+            const errorMsg = error.message || '';
+            if (errorMsg.includes('No payment found') || 
+                errorMsg.includes('404') || 
+                errorMsg.includes('Not Found') ||
+                errorMsg.includes('ResourceNotFoundException')) {
+                // Silently return null - this is expected for new bookings
+                return null;
+            }
+            // For other errors, re-throw
+            throw error;
+        }
     },
     
     create: async (bookingId, paymentMethod) => {

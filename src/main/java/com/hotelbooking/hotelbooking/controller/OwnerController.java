@@ -38,5 +38,10 @@ public class OwnerController {
                 .toList();
         return ResponseEntity.ok(bookings);
     }
+
+    @PutMapping("/bookings/{id}/confirm")
+    public ResponseEntity<com.hotelbooking.hotelbooking.model.Booking> confirmBooking(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.confirmBooking(id));
+    }
 }
 

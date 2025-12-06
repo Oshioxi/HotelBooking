@@ -43,7 +43,7 @@ async function displayBookings(bookings) {
                 'CONFIRMED': 'badge-success',
                 'PENDING': 'badge-warning',
                 'CANCELLED': 'badge-danger',
-                'COMPLETED': 'badge-info'
+                'COMPLETED': 'badge-primary'
             }[booking.bookingStatus] || 'badge-secondary';
 
             html += `

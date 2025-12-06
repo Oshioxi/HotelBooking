@@ -64,5 +64,17 @@ public class BookingController {
     public ResponseEntity<Booking> confirmBooking(@PathVariable Long id) {
         return ResponseEntity.ok(bookingService.confirmBooking(id));
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Booking> updateBooking(
+            @PathVariable Long id,
+            @Valid @RequestBody BookingRequest request) {
+        return ResponseEntity.ok(bookingService.updateBooking(id, request));
+    }
+
+    @PutMapping("/{id}/cancel-by-admin")
+    public ResponseEntity<Booking> cancelBookingByAdmin(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.cancelBookingByAdmin(id));
+    }
 }
 
