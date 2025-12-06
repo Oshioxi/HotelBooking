@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/room-types/{roomTypeId}/amenities").permitAll() // Allow GET room type amenities for public viewing
                 .requestMatchers(HttpMethod.GET, "/api/room-types/{roomTypeId}/images").permitAll() // Allow GET room type images for public viewing
                 .requestMatchers("/api/amenities/**").permitAll() // Allow GET all amenities for public viewing
+                .requestMatchers("/api/provinces/**").permitAll() // Allow GET provinces API (proxy for external API)
                 
                 // Public pages (view pages are protected by client-side JWT checks)
                 .requestMatchers("/", "/index", "/login", "/register", 

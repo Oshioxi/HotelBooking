@@ -962,7 +962,6 @@ async function toggleRoomWishlist(roomId, event) {
 
 // Export to global scope
 window.toggleRoomWishlist = toggleRoomWishlist;
-}
 
 // Setup room search form
 function setupRoomSearchForm() {

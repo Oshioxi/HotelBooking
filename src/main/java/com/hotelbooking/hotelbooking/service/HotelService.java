@@ -210,6 +210,25 @@ public class HotelService {
         return hotelRepository.findByStatus(Hotel.HotelStatus.APPROVED);
     }
     
+    public List<Hotel> searchHotelsByNameOrCity(String query) {
+        if (query != null && !query.trim().isEmpty()) {
+            return hotelRepository.searchHotelsByNameOrCity(query.trim());
+        }
+        return hotelRepository.findByStatus(Hotel.HotelStatus.APPROVED);
+    }
+    
+    public List<String> searchHotelNames(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return List.of();
+        }
+        return hotelRepository.findByStatus(Hotel.HotelStatus.APPROVED).stream()
+                .map(Hotel::getName)
+                .filter(name -> name != null && name.toLowerCase().contains(query.toLowerCase()))
+                .distinct()
+                .limit(10)
+                .collect(Collectors.toList());
+    }
+    
     public List<String> getAvailableCities() {
         return hotelRepository.findDistinctCitiesByStatus();
     }

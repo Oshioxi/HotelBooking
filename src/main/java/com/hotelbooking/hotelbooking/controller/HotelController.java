@@ -75,6 +75,14 @@ public class HotelController {
         return ResponseEntity.ok(hotelService.searchHotels(city));
     }
     
+    @GetMapping("/search/autocomplete")
+    public ResponseEntity<List<Hotel>> searchHotelsAutocomplete(@RequestParam(required = false) String q) {
+        if (q == null || q.trim().isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+        return ResponseEntity.ok(hotelService.searchHotelsByNameOrCity(q));
+    }
+    
     @GetMapping("/cities")
     public ResponseEntity<List<String>> getAvailableCities() {
         return ResponseEntity.ok(hotelService.getAvailableCities());

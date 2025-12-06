@@ -16,5 +16,10 @@ public interface HotelRepository extends JpaRepository<Hotel, Long> {
     
     @Query("SELECT DISTINCT h.city FROM Hotel h WHERE h.status = 'APPROVED' ORDER BY h.city ASC")
     List<String> findDistinctCitiesByStatus();
+    
+    @Query("SELECT h FROM Hotel h WHERE h.status = 'APPROVED' AND " +
+           "(LOWER(h.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(h.city) LIKE LOWER(CONCAT('%', :query, '%')))")
+    List<Hotel> searchHotelsByNameOrCity(@Param("query") String query);
 }
 

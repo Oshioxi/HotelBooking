@@ -103,14 +103,18 @@
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="form-group mb-3">
-                                                        <label>City <span class="text-danger">*</span></label>
-                                                        <input type="text" id="city" class="form-control" required placeholder="Enter city">
+                                                        <label>Tỉnh/Thành phố <span class="text-danger">*</span></label>
+                                                        <select id="province" class="form-control" required>
+                                                            <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                                                        </select>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="form-group mb-3">
-                                                        <label>Country <span class="text-danger">*</span></label>
-                                                        <input type="text" id="country" class="form-control" required placeholder="Enter country">
+                                                        <label>Phường/Xã <span class="text-danger">*</span></label>
+                                                        <select id="ward" class="form-control" required disabled>
+                                                            <option value="">-- Chọn Phường/Xã --</option>
+                                                        </select>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
@@ -122,8 +126,21 @@
                                                 </div>
                                                 <div class="col-12">
                                                     <div class="form-group mb-3">
-                                                        <label>Address <span class="text-danger">*</span></label>
-                                                        <textarea id="address" class="form-control" required rows="3" placeholder="Enter full address"></textarea>
+                                                        <label>Địa chỉ chi tiết (Số nhà, tên đường) <span class="text-danger">*</span></label>
+                                                        <textarea id="address" class="form-control" required rows="3" placeholder="Ví dụ: 123 Đường ABC"></textarea>
+                                                        <small class="form-text text-muted">Nhập số nhà và tên đường</small>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6" style="display: none;">
+                                                    <div class="form-group mb-3">
+                                                        <label>City (Auto-filled)</label>
+                                                        <input type="text" id="city" class="form-control" readonly>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6" style="display: none;">
+                                                    <div class="form-group mb-3">
+                                                        <label>Country (Auto-filled)</label>
+                                                        <input type="text" id="country" class="form-control" value="Việt Nam" readonly>
                                                     </div>
                                                 </div>
                                                 <div class="col-12">

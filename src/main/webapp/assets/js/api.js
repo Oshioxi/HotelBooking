@@ -240,6 +240,14 @@ const HotelAPI = {
     
     getAvailableCities: async () => {
         return await apiRequest('/hotels/cities');
+    },
+    
+    searchAutocomplete: async (query) => {
+        if (!query || query.trim().length < 2) {
+            return [];
+        }
+        const params = `?q=${encodeURIComponent(query.trim())}`;
+        return await apiRequest(`/hotels/search/autocomplete${params}`);
     }
 };
 

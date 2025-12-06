@@ -19,7 +19,9 @@ let currentFilters = {
 };
 
 let availableCities = [];
+let availableProvinces = [];
 let selectedCity = null;
+let selectedDestination = null; // Can be hotel name or city
 
 // Pagination state
 let currentPage = 1;
@@ -63,8 +65,11 @@ async function loadSearchParamsFromURL() {
 }
 
 document.addEventListener('DOMContentLoaded', async function() {
-    // Load available cities for autocomplete
-    await loadAvailableCities();
+    // Load available cities and provinces for autocomplete
+    await Promise.all([
+        loadAvailableCities(),
+        loadProvinces()
+    ]);
     
     // Initialize date pickers
     initializeDatePickers();
@@ -106,6 +111,19 @@ async function loadAvailableCities() {
         console.log('Loaded cities:', availableCities);
     } catch (error) {
         console.error('Error loading cities:', error);
+    }
+}
+
+async function loadProvinces() {
+    try {
+        const contextPath = window.contextPath || '';
+        const response = await fetch(`${contextPath}/api/provinces`);
+        if (response.ok) {
+            availableProvinces = await response.json();
+            console.log('Loaded provinces:', availableProvinces.length);
+        }
+    } catch (error) {
+        console.error('Error loading provinces:', error);
     }
 }
 

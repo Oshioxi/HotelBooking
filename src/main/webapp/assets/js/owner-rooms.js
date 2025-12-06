@@ -1048,15 +1048,15 @@
     async function updateTotalRooms(roomId, newTotalRooms) {
         if (!roomId) {
             alert('Invalid room ID');
-            return;
-        }
-        
+                return;
+            }
+            
         const totalRoomsNum = parseInt(newTotalRooms);
         if (isNaN(totalRoomsNum) || totalRoomsNum < 0) {
             alert('Please enter a valid number (0 or greater)');
-            return;
-        }
-        
+                return;
+            }
+            
         try {
             // Get current room data
             const room = await window.HotelBookingAPI.RoomTypeAPI.getById(roomId);

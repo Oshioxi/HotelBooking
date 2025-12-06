@@ -9,6 +9,13 @@
     let allHotelsData = [];
     let managingHotelId = null;
     
+    // Address API integration
+    const PROVINCES_API = 'https://provinces.open-api.vn/api';
+    let provincesData = [];
+    let wardsData = [];
+    let selectedProvince = null;
+    let selectedWard = null;
+    
     // Helper function to normalize image URL
     function normalizeImageUrl(url) {
         if (!url || typeof url !== 'string') return null;
@@ -289,7 +296,127 @@
         tbody.innerHTML = html;
     }
 
-    window.showAddHotelModal = function() {
+    // Load provinces from API
+    async function loadProvinces() {
+        try {
+            // Use proxy endpoint to avoid CORS
+            const response = await fetch(`${contextPath}/api/provinces`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to load provinces');
+            }
+            provincesData = await response.json();
+            
+            const provinceSelect = document.getElementById('province');
+            if (!provinceSelect) return;
+            
+            provinceSelect.innerHTML = '<option value="">-- Chọn Tỉnh/Thành phố --</option>';
+            provincesData.forEach(province => {
+                const option = document.createElement('option');
+                option.value = province.code;
+                option.textContent = province.name;
+                provinceSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Error loading provinces:', error);
+            const provinceSelect = document.getElementById('province');
+            if (provinceSelect) {
+                provinceSelect.innerHTML = '<option value="">Lỗi tải danh sách tỉnh/thành phố</option>';
+            }
+        }
+    }
+    
+    // Load wards from API (API v2: wards are directly under province)
+    async function loadWards(provinceCode) {
+        try {
+            if (!provinceCode) {
+                const wardSelect = document.getElementById('ward');
+                if (wardSelect) {
+                    wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+                    wardSelect.disabled = true;
+                }
+                return;
+            }
+            
+            // Use proxy endpoint to avoid CORS
+            const response = await fetch(`${contextPath}/api/provinces/${provinceCode}/wards`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to load wards');
+            }
+            const responseData = await response.json();
+            console.log('Wards response:', responseData); // Debug log
+            
+            // API v2 returns array of wards directly
+            wardsData = Array.isArray(responseData) ? responseData : [];
+            
+            console.log('Parsed wards data:', wardsData); // Debug log
+            
+            const wardSelect = document.getElementById('ward');
+            if (!wardSelect) return;
+            
+            wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+            
+            if (wardsData.length === 0) {
+                wardSelect.innerHTML = '<option value="">Không có phường/xã</option>';
+                wardSelect.disabled = true;
+                return;
+            }
+            
+            wardsData.forEach(ward => {
+                const option = document.createElement('option');
+                option.value = ward.code;
+                option.textContent = ward.name;
+                wardSelect.appendChild(option);
+            });
+            wardSelect.disabled = false;
+        } catch (error) {
+            console.error('Error loading wards:', error);
+            const wardSelect = document.getElementById('ward');
+            if (wardSelect) {
+                wardSelect.innerHTML = '<option value="">Lỗi tải danh sách phường/xã</option>';
+            }
+        }
+    }
+    
+    // Setup address dropdowns event listeners
+    function setupAddressDropdowns() {
+        const provinceSelect = document.getElementById('province');
+        const wardSelect = document.getElementById('ward');
+        
+        if (provinceSelect) {
+            provinceSelect.addEventListener('change', async function() {
+                const provinceCode = this.value;
+                selectedProvince = provincesData.find(p => p.code == provinceCode);
+                await loadWards(provinceCode);
+                
+                // Update city field
+                const cityInput = document.getElementById('city');
+                if (cityInput && selectedProvince) {
+                    cityInput.value = selectedProvince.name;
+                }
+            });
+        }
+        
+        if (wardSelect) {
+            wardSelect.addEventListener('change', function() {
+                const wardCode = this.value;
+                selectedWard = wardsData.find(w => w.code == wardCode);
+            });
+        }
+    }
+    
+    window.showAddHotelModal = async function() {
         try {
             const modal = document.getElementById('hotelModal');
             const title = document.getElementById('hotelModalTitle');
@@ -308,6 +435,22 @@
             ownerIdInput.value = ownerId || '';
             isEditMode = false;
             currentHotelId = null;
+            
+            // Reset address dropdowns
+            selectedProvince = null;
+            selectedWard = null;
+            
+            // Load provinces
+            await loadProvinces();
+            
+            // Setup event listeners
+            setupAddressDropdowns();
+            
+            // Set country to Vietnam
+            const countryInput = document.getElementById('country');
+            if (countryInput) {
+                countryInput.value = 'Việt Nam';
+            }
             
             const bsModal = new bootstrap.Modal(modal);
             bsModal.show();
@@ -350,11 +493,23 @@
             hotelIdInput.value = safeGet(hotel, 'id', '');
             nameInput.value = safeGet(hotel, 'name', '');
             cityInput.value = safeGet(hotel, 'city', '');
-            countryInput.value = safeGet(hotel, 'country', '');
+            countryInput.value = safeGet(hotel, 'country', 'Việt Nam');
             ratingInput.value = safeGet(hotel, 'rating', '0.0');
-            addressInput.value = safeGet(hotel, 'address', '');
+            // Parse address to extract detail part
+            const fullAddress = safeGet(hotel, 'address', '');
+            // Try to extract detail address (before first comma or use full address)
+            const addressParts = fullAddress.split(',');
+            const addressDetail = addressParts.length > 0 ? addressParts[0].trim() : fullAddress;
+            addressInput.value = addressDetail;
             descriptionInput.value = safeGet(hotel, 'description', '');
             ownerIdInput.value = safeGet(hotel, 'ownerId', ownerId || '');
+            
+            // Load provinces and try to match existing address
+            await loadProvinces();
+            setupAddressDropdowns();
+            
+            // Try to parse and set province/district/ward from existing address
+            await parseAndSetAddress(hotel.address, hotel.city);
             
             isEditMode = true;
             currentHotelId = id;
@@ -370,6 +525,44 @@
         }
     };
 
+    // Parse and set address from existing data
+    async function parseAndSetAddress(address, city) {
+        try {
+            if (!city) return;
+            
+            // Find province by city name
+            const province = provincesData.find(p => 
+                p.name.toLowerCase().includes(city.toLowerCase()) || 
+                city.toLowerCase().includes(p.name.toLowerCase())
+            );
+            
+            if (province) {
+                const provinceSelect = document.getElementById('province');
+                if (provinceSelect) {
+                    provinceSelect.value = province.code;
+                    selectedProvince = province;
+                    await loadWards(province.code);
+                    
+                    // Try to find ward from address
+                    if (address && wardsData.length > 0) {
+                        for (const ward of wardsData) {
+                            if (address.toLowerCase().includes(ward.name.toLowerCase())) {
+                                const wardSelect = document.getElementById('ward');
+                                if (wardSelect) {
+                                    wardSelect.value = ward.code;
+                                    selectedWard = ward;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error parsing address:', error);
+        }
+    }
+    
     window.saveHotel = async function() {
         try {
             const nameInput = document.getElementById('name');
@@ -378,6 +571,8 @@
             const addressInput = document.getElementById('address');
             const ratingInput = document.getElementById('rating');
             const descriptionInput = document.getElementById('description');
+            const provinceSelect = document.getElementById('province');
+            const wardSelect = document.getElementById('ward');
             
             if (!nameInput || !cityInput || !countryInput || !addressInput) {
                 alert('Error: Form elements not found');
@@ -385,14 +580,36 @@
             }
             
             const name = (nameInput.value || '').trim();
-            const city = (cityInput.value || '').trim();
-            const country = (countryInput.value || '').trim();
-            const address = (addressInput.value || '').trim();
+            const addressDetail = (addressInput.value || '').trim();
             
-            if (!name || !city || !country || !address) {
-                alert('Please fill in all required fields (Name, City, Country, Address)');
+            // Validate required fields
+            if (!name) {
+                alert('Vui lòng nhập tên khách sạn');
                 return;
             }
+            
+            if (!provinceSelect || !provinceSelect.value) {
+                alert('Vui lòng chọn Tỉnh/Thành phố');
+                return;
+            }
+            
+            if (!wardSelect || !wardSelect.value) {
+                alert('Vui lòng chọn Phường/Xã');
+                return;
+            }
+            
+            if (!addressDetail) {
+                alert('Vui lòng nhập địa chỉ chi tiết (số nhà, tên đường)');
+                return;
+            }
+            
+            // Build full address (API v2: only province and ward)
+            const provinceName = selectedProvince ? selectedProvince.name : '';
+            const wardName = selectedWard ? selectedWard.name : '';
+            
+            const fullAddress = `${addressDetail}, ${wardName}, ${provinceName}`;
+            const city = provinceName; // Use province name as city
+            const country = 'Việt Nam';
             
             if (!ownerId) {
                 alert('Error: Owner ID not found. Please refresh the page.');
@@ -411,7 +628,7 @@
                 name: name,
                 city: city,
                 country: country,
-                address: address,
+                address: fullAddress,
                 description: (descriptionInput ? (descriptionInput.value || '').trim() : ''),
                 rating: rating,
                 ownerId: ownerId
