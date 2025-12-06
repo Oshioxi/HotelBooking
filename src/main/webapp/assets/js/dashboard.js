@@ -75,7 +75,6 @@ function loadSidebarMenu(role, currentPage) {
         menuHTML += menuItem('/owner/hotels', 'far fa-building', 'My Hotels', isActive('/owner/hotels'));
         menuHTML += menuItem('/owner/rooms', 'far fa-door-open', 'My Rooms', isActive('/owner/rooms'));
         menuHTML += menuItem('/owner/bookings', 'far fa-shopping-bag', 'My Bookings', isActive('/owner/bookings'));
-        menuHTML += menuItem('/owner/calendar', 'far fa-calendar', 'Booking Calendar', isActive('/owner/calendar'));
     } else {
         menuHTML += menuItem('/dashboard', 'far fa-gauge-high', 'Dashboard', isActive('/dashboard'));
         menuHTML += menuItem('/user/profile', 'far fa-user', 'My Profile', isActive('/user/profile'));

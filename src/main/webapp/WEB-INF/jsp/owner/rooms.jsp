@@ -80,6 +80,7 @@
                                             <th>Hotel</th>
                                             <th>Type</th>
                                             <th>Price/Night</th>
+                                            <th>Total Rooms</th>
                                             <th>Status</th>
                                             <th>Images</th>
                                             <th>Amenities</th>
@@ -88,7 +89,7 @@
                                     </thead>
                                     <tbody>
                                         <tr>
-                                            <td colspan="9" class="text-center">Loading...</td>
+                                            <td colspan="10" class="text-center">Loading...</td>
                                         </tr>
                                     </tbody>
                                 </table>
