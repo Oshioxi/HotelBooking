@@ -38,6 +38,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/hotels").permitAll() // Allow GET all hotels for public viewing
                 .requestMatchers(HttpMethod.GET, "/api/hotels/{id}").permitAll() // Allow GET individual hotel for public viewing
                 .requestMatchers("/api/hotels/search").permitAll() // Allow search hotels
+                .requestMatchers("/api/hotels/search/autocomplete").permitAll() // Allow autocomplete search for hotels
+                .requestMatchers("/api/hotels/cities").permitAll() // Allow GET available cities for public viewing
                 .requestMatchers(HttpMethod.GET, "/api/hotels/{hotelId}/amenities").permitAll() // Allow GET hotel amenities for public viewing
                 .requestMatchers(HttpMethod.GET, "/api/hotels/{hotelId}/images").permitAll() // Allow GET hotel images for public viewing
                 .requestMatchers(HttpMethod.GET, "/api/room-types/{roomTypeId}/amenities").permitAll() // Allow GET room type amenities for public viewing

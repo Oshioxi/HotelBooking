@@ -133,9 +133,9 @@ function setupCityAutocomplete() {
     
     // Create autocomplete dropdown
     const autocompleteContainer = document.createElement('div');
-    autocompleteContainer.className = 'city-autocomplete';
-    autocompleteContainer.id = 'cityAutocomplete';
-    autocompleteContainer.style.cssText = 'position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+    autocompleteContainer.className = 'destination-autocomplete';
+    autocompleteContainer.id = 'destinationAutocomplete';
+    autocompleteContainer.style.cssText = 'position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-top: none; border-radius: 0 0 4px 4px; max-height: 300px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-top: -1px;';
     
     const formGroup = cityInput.closest('.form-group');
     if (formGroup) {
@@ -144,42 +144,55 @@ function setupCityAutocomplete() {
     }
     
     let debounceTimer;
+    let currentSuggestions = [];
     
-    cityInput.addEventListener('input', function(e) {
-        const query = e.target.value.trim().toLowerCase();
-        selectedCity = null; // Reset selected city when user types
+    cityInput.addEventListener('input', async function(e) {
+        const query = e.target.value.trim();
+        selectedDestination = null;
         
         clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            if (query.length === 0) {
+        debounceTimer = setTimeout(async () => {
+            if (query.length < 2) {
                 autocompleteContainer.style.display = 'none';
                 return;
             }
             
-            // Filter cities
-            const filtered = availableCities.filter(city => 
-                city.toLowerCase().includes(query)
-            );
-            
-            if (filtered.length === 0) {
+            try {
+                // Search hotels by name or city
+                const hotels = await HotelBookingAPI.HotelAPI.searchAutocomplete(query);
+                
+                // Filter cities and provinces
+                const filteredCities = availableCities.filter(city => 
+                    city.toLowerCase().includes(query.toLowerCase())
+                ).slice(0, 5);
+                
+                const filteredProvinces = availableProvinces.filter(province => 
+                    province.name && province.name.toLowerCase().includes(query.toLowerCase())
+                ).slice(0, 5);
+                
+                currentSuggestions = {
+                    hotels: hotels || [],
+                    cities: filteredCities,
+                    provinces: filteredProvinces
+                };
+                
+                if (hotels.length === 0 && filteredCities.length === 0 && filteredProvinces.length === 0) {
+                    autocompleteContainer.style.display = 'none';
+                    return;
+                }
+                
+                displayDestinationSuggestions(currentSuggestions, autocompleteContainer, cityInput);
+            } catch (error) {
+                console.error('Error searching:', error);
                 autocompleteContainer.style.display = 'none';
-                return;
             }
-            
-            // Display suggestions
-            displayCitySuggestions(filtered, autocompleteContainer, cityInput);
-        }, 200);
+        }, 300);
     });
     
-    cityInput.addEventListener('focus', function() {
-        const query = cityInput.value.trim().toLowerCase();
-        if (query.length > 0) {
-            const filtered = availableCities.filter(city => 
-                city.toLowerCase().includes(query)
-            );
-            if (filtered.length > 0) {
-                displayCitySuggestions(filtered, autocompleteContainer, cityInput);
-            }
+    cityInput.addEventListener('focus', async function() {
+        const query = cityInput.value.trim();
+        if (query.length >= 2) {
+            cityInput.dispatchEvent(new Event('input'));
         }
     });
     
@@ -196,34 +209,154 @@ function setupCityAutocomplete() {
     });
 }
 
-function displayCitySuggestions(cities, container, input) {
+function displayDestinationSuggestions(suggestions, container, input) {
     container.innerHTML = '';
     
-    cities.forEach(city => {
-        const item = document.createElement('div');
-        item.className = 'autocomplete-item';
-        item.style.cssText = 'padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s;';
-        item.textContent = city;
+    const { hotels, cities, provinces } = suggestions;
+    let hasContent = false;
+    
+    // Display Hotels
+    if (hotels && hotels.length > 0) {
+        const section = document.createElement('div');
+        section.className = 'autocomplete-section';
+        section.style.cssText = 'padding: 8px 0; border-bottom: 2px solid #eee;';
         
-        item.addEventListener('mouseenter', function() {
-            item.style.backgroundColor = '#f5f5f5';
+        const sectionTitle = document.createElement('div');
+        sectionTitle.className = 'autocomplete-section-title';
+        sectionTitle.style.cssText = 'padding: 5px 15px; font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase;';
+        sectionTitle.textContent = 'Khách sạn';
+        section.appendChild(sectionTitle);
+        
+        hotels.slice(0, 5).forEach(hotel => {
+            const item = createAutocompleteItem(
+                hotel.name,
+                `${hotel.city || ''}, ${hotel.country || ''}`,
+                'far fa-hotel',
+                () => {
+                    input.value = hotel.name;
+                    selectedDestination = hotel.name;
+                    container.style.display = 'none';
+                }
+            );
+            section.appendChild(item);
         });
         
-        item.addEventListener('mouseleave', function() {
-            item.style.backgroundColor = 'white';
+        container.appendChild(section);
+        hasContent = true;
+    }
+    
+    // Display Cities
+    if (cities && cities.length > 0) {
+        const section = document.createElement('div');
+        section.className = 'autocomplete-section';
+        section.style.cssText = 'padding: 8px 0; border-bottom: 2px solid #eee;';
+        
+        const sectionTitle = document.createElement('div');
+        sectionTitle.className = 'autocomplete-section-title';
+        sectionTitle.style.cssText = 'padding: 5px 15px; font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase;';
+        sectionTitle.textContent = 'Thành phố';
+        section.appendChild(sectionTitle);
+        
+        cities.forEach(city => {
+            const item = createAutocompleteItem(
+                city,
+                '',
+                'far fa-map-marker-alt',
+                () => {
+                    input.value = city;
+                    selectedDestination = city;
+                    selectedCity = city;
+                    container.style.display = 'none';
+                }
+            );
+            section.appendChild(item);
         });
         
-        item.addEventListener('click', function() {
-            input.value = city;
-            selectedCity = city;
-            container.style.display = 'none';
-            input.focus();
+        container.appendChild(section);
+        hasContent = true;
+    }
+    
+    // Display Provinces
+    if (provinces && provinces.length > 0) {
+        const section = document.createElement('div');
+        section.className = 'autocomplete-section';
+        section.style.cssText = 'padding: 8px 0;';
+        
+        const sectionTitle = document.createElement('div');
+        sectionTitle.className = 'autocomplete-section-title';
+        sectionTitle.style.cssText = 'padding: 5px 15px; font-weight: 600; color: #666; font-size: 12px; text-transform: uppercase;';
+        sectionTitle.textContent = 'Tỉnh/Thành phố';
+        section.appendChild(sectionTitle);
+        
+        provinces.forEach(province => {
+            const item = createAutocompleteItem(
+                province.name,
+                '',
+                'far fa-map-marker-alt',
+                () => {
+                    input.value = province.name;
+                    selectedDestination = province.name;
+                    selectedCity = province.name;
+                    container.style.display = 'none';
+                }
+            );
+            section.appendChild(item);
         });
         
-        container.appendChild(item);
+        container.appendChild(section);
+        hasContent = true;
+    }
+    
+    if (hasContent) {
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+function createAutocompleteItem(title, subtitle, icon, onClick) {
+    const item = document.createElement('div');
+    item.className = 'autocomplete-item';
+    item.style.cssText = 'padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; display: flex; align-items: center; gap: 10px;';
+    
+    const iconEl = document.createElement('i');
+    iconEl.className = icon;
+    iconEl.style.cssText = 'color: #666; width: 20px; text-align: center;';
+    
+    const content = document.createElement('div');
+    content.style.cssText = 'flex: 1;';
+    
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = 'font-weight: 500; color: #333;';
+    titleEl.textContent = title;
+    
+    content.appendChild(titleEl);
+    
+    if (subtitle) {
+        const subtitleEl = document.createElement('div');
+        subtitleEl.style.cssText = 'font-size: 12px; color: #999; margin-top: 2px;';
+        subtitleEl.textContent = subtitle;
+        content.appendChild(subtitleEl);
+    }
+    
+    item.appendChild(iconEl);
+    item.appendChild(content);
+    
+    item.addEventListener('mouseenter', function() {
+        item.style.backgroundColor = '#f5f5f5';
     });
     
-    container.style.display = 'block';
+    item.addEventListener('mouseleave', function() {
+        item.style.backgroundColor = 'white';
+    });
+    
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+    });
+    
+    return item;
 }
 
 function initializeDatePickers() {
@@ -438,7 +571,7 @@ function setupSearchForm() {
             e.preventDefault();
             
             const cityInput = document.querySelector('input[name="destination"]');
-            const city = selectedCity || cityInput?.value?.trim() || '';
+            const destination = selectedDestination || cityInput?.value?.trim() || '';
             let checkIn = document.querySelector('input[name="journey-date"]')?.value || '';
             let checkOut = document.querySelector('input[name="return-date"]')?.value || '';
             const adults = parseInt(document.querySelector('.passenger-adult')?.value || '2');
@@ -447,9 +580,9 @@ function setupSearchForm() {
             const guests = adults + children;
             const locationText = document.querySelector('.destination-location')?.textContent || '';
             
-            // Validate city - must be from available cities
-            if (!city || !selectedCity) {
-                alert('Please select a city from the suggestions');
+            // Validate destination
+            if (!destination) {
+                alert('Vui lòng nhập tên khách sạn hoặc thành phố');
                 cityInput?.focus();
                 return;
             }
@@ -459,7 +592,7 @@ function setupSearchForm() {
             checkOut = normalizeDateToISO(checkOut);
             
             // Update current filters
-            currentFilters.city = city;
+            currentFilters.city = destination; // Can be hotel name or city
             currentFilters.checkIn = checkIn;
             currentFilters.checkOut = checkOut;
             currentFilters.guests = guests;
@@ -468,7 +601,7 @@ function setupSearchForm() {
             currentFilters.rooms = rooms;
             
             // Save to session storage (always in ISO format)
-            sessionStorage.setItem('searchCity', city);
+            sessionStorage.setItem('searchCity', destination);
             sessionStorage.setItem('searchCheckIn', checkIn);
             sessionStorage.setItem('searchCheckOut', checkOut);
             sessionStorage.setItem('searchGuests', guests.toString());
@@ -481,7 +614,7 @@ function setupSearchForm() {
             
             // Update URL with search parameters
             const urlParams = new URLSearchParams();
-            urlParams.set('city', city);
+            urlParams.set('city', destination);
             if (checkIn) urlParams.set('checkIn', checkIn);
             if (checkOut) urlParams.set('checkOut', checkOut);
             if (guests) urlParams.set('guests', guests.toString());
@@ -581,8 +714,14 @@ async function loadHotels() {
             hotels = await HotelBookingAPI.HotelAPI.getAll();
             hotels = hotels.filter(hotel => hotel.status === 'APPROVED');
         } else {
-            // Search hotels by city
-            hotels = await HotelBookingAPI.HotelAPI.searchByCity(city);
+            // Search hotels by name or city using autocomplete endpoint
+            try {
+                hotels = await HotelBookingAPI.HotelAPI.searchAutocomplete(city);
+            } catch (error) {
+                console.warn('Autocomplete search failed, falling back to city search:', error);
+                // Fallback to city search
+                hotels = await HotelBookingAPI.HotelAPI.searchByCity(city);
+            }
         }
         
         // Load images for each hotel

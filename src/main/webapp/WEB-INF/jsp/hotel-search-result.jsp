@@ -138,11 +138,11 @@
                                 <div class="hotel-search-wrapper">
                                     <div class="row g-3">
                                         <div class="col-lg-3 col-md-6">
-                                            <div class="form-group">
+                                            <div class="form-group" style="position: relative;">
                                                 <label><i class="far fa-map-marker-alt"></i> Destination</label>
                                                 <div class="form-group-icon">
-                                                    <input type="text" name="destination" class="form-control"
-                                                        value="" placeholder="Enter destination">
+                                                    <input type="text" name="destination" id="searchDestination" class="form-control"
+                                                        value="" placeholder="Tìm khách sạn hoặc thành phố..." autocomplete="off">
                                                 </div>
                                                 <p class="destination-location"></p>
                                             </div>
